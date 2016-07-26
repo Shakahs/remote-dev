@@ -1,0 +1,3 @@
+---
+- name: restart vnc
+  service: name=vncserver@:0 state=restarted

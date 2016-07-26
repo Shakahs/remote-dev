@@ -1,0 +1,65 @@
+---
+- name: Create shak group
+  action: group name=shak state=present
+
+- name: Create shak user
+  action: user name=shak groups=shak,wheel append=yes
+
+- name: modify authorized keys
+  authorized_key: user=shak key="{{ lookup('file', 'id_rsa.pub') }}"
+
+- name: Enable sudo without password
+  lineinfile: "dest=/etc/sudoers regexp='^.*%wheel.*NOPASSWD.*' line='%wheel ALL=(ALL) NOPASSWD: ALL' insertafter=EOF"
+
+- name: install epel
+  package: state=latest name=epel-release
+  when: ansible_distribution == "CentOS"
+
+- name: install libselinux-python so we can enable fastestmirrors
+  package: state=latest name=libselinux-python
+
+- name: ensure fastestmirrors is on
+  lineinfile: dest=/etc/{{  ansible_pkg_mgr  }}.conf regexp=^(#?)fastestmirror line=fastestmirror=true
+
+- name: install required packages
+  action: package state=latest name={{ item }}
+  with_items:
+     - byobu
+     - nload
+     - htop
+     - tigervnc-server
+     - java-1.8.0-openjdk
+     - python-virtualenvwrapper
+     - python-devel
+     - bash-completion
+     - firefox
+
+- name: install development tools
+  action: package state=present name="@Development tools" 
+
+- name: install Xfce desktop
+  action: package state=present name="@Xfce"
+
+- name: Ensure vnc directory exists
+  file: dest=/home/shak/.vnc state=directory owner=shak group=shak
+  tags: vnc
+
+- name: Place vnc passwd file
+  copy: src=passwd dest=/home/shak/.vnc/passwd owner=shak group=shak mode=600
+  notify: restart vnc
+  tags: vnc
+
+- name: Place vnc xstartup file
+  copy: src=xstartup dest=/home/shak/.vnc/xstartup owner=shak group=shak mode=700
+  notify: restart vnc
+  tags: vnc
+
+- name: Place vnc service file
+  copy: src=vncserver@:0.service dest=/etc/systemd/system/vncserver@:0.service
+  notify: restart vnc
+  tags: vnc
+
+- name: Enable vnc service
+  service: name=vncserver@:0.service enabled=yes
+  notify: restart vnc
+  tags: vnc

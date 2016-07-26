@@ -1,0 +1,4 @@
+[dev-machines]
+10.138.0.4
+159.203.253.244 ansible_user=root
+45.32.94.117 ansible_user=root
